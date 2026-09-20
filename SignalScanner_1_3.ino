@@ -1,0 +1,303 @@
+#include <string.h>
+//Libraries for screen
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+//Library for wifi
+#include <WiFi.h>
+//Library For Bluetooth (BLE)
+#include "NimBLEDevice.h"
+
+// Define OLED screen resolution
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+//buttons
+#define LEFT 18
+#define RIGHT 5
+#define SELECT 23
+#define BACK 14
+
+// Define OLED I2C address (default is usually 0x3C or 0x3D)
+#define OLED_ADDR   0x3C
+
+// Create OLED object
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+//BITMAPS for menu screen --> intend to optimise the size at a later date
+// 'WiFi_BMP', 42x40px
+const unsigned char WiFi_BMP [] PROGMEM = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1f, 
+	0xff, 0xfe, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xc0, 0x00, 0x01, 0xff, 0xff, 0xff, 0xe0, 0x00, 
+	0x01, 0xe0, 0x00, 0x01, 0xe0, 0x00, 0x07, 0x80, 0x00, 0x00, 0x78, 0x00, 0x0f, 0x00, 0x00, 0x00, 
+	0x3c, 0x00, 0x0f, 0x01, 0xff, 0xe0, 0x3c, 0x00, 0x0e, 0x1f, 0xff, 0xfe, 0x1c, 0x00, 0x00, 0x1f, 
+	0xff, 0xfe, 0x00, 0x00, 0x00, 0x7f, 0x00, 0x3f, 0x80, 0x00, 0x00, 0xf8, 0x00, 0x07, 0xc0, 0x00, 
+	0x00, 0xe0, 0x7f, 0x81, 0xc0, 0x00, 0x00, 0xe1, 0xff, 0xe1, 0xc0, 0x00, 0x00, 0x01, 0xff, 0xe0, 
+	0x00, 0x00, 0x00, 0x07, 0x80, 0x78, 0x00, 0x00, 0x00, 0x07, 0x00, 0x38, 0x00, 0x00, 0x00, 0x07, 
+	0x00, 0x38, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x1e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x02, 0x09, 0xc0, 0x79, 0xc0, 0x00, 0x02, 0x08, 0x80, 0x40, 0x80, 0x00, 0x02, 0x48, 
+	0x80, 0x78, 0x80, 0x00, 0x02, 0x48, 0x9f, 0x40, 0x80, 0x00, 0x02, 0x48, 0x9f, 0x40, 0x80, 0x00, 
+	0x03, 0x58, 0x80, 0x40, 0x80, 0x00, 0x01, 0xb1, 0xc0, 0x41, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+// 'BTooth_BMP', 42x40px
+const unsigned char BTooth_BMP [] PROGMEM = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x18, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x3c, 0x00, 0x00, 
+	0x00, 0x1f, 0x80, 0x7e, 0x00, 0x00, 0x00, 0x39, 0xc0, 0xe7, 0x00, 0x00, 0x00, 0x70, 0xe1, 0xc3, 
+	0x80, 0x00, 0x00, 0xe0, 0x61, 0x81, 0xc0, 0x00, 0x00, 0xc0, 0x33, 0x00, 0xc0, 0x00, 0x01, 0x80, 
+	0x1e, 0x00, 0x60, 0x00, 0x03, 0xff, 0xff, 0xff, 0xf0, 0x00, 0x03, 0xff, 0xff, 0xff, 0xf0, 0x00, 
+	0x00, 0x7f, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x73, 0x80, 
+	0x00, 0x00, 0x00, 0x01, 0xe1, 0xe0, 0x00, 0x00, 0x00, 0x03, 0xe1, 0xf0, 0x00, 0x00, 0x00, 0x0f, 
+	0x80, 0x7c, 0x00, 0x00, 0x00, 0x3e, 0x00, 0x1f, 0x00, 0x00, 0x00, 0x78, 0x00, 0x07, 0x80, 0x00, 
+	0x00, 0x70, 0x00, 0x03, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x72, 0x25, 0xdd, 0xef, 0x74, 0x80, 0x72, 0x25, 
+	0xdd, 0xef, 0x74, 0x80, 0x4a, 0x25, 0x09, 0x29, 0x24, 0x80, 0x72, 0x25, 0xc9, 0x29, 0x27, 0x80, 
+	0x4a, 0x25, 0x09, 0x29, 0x24, 0x80, 0x73, 0xbd, 0xc9, 0xef, 0x24, 0x80, 0x73, 0xbd, 0xc9, 0xef, 
+	0x24, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+//Global Variables for WiFi module
+bool initialScanWiFi{false};
+int16_t wifiNets{0};
+
+//Global Variables for BLE module
+bool initialBLEScan{false};
+int16_t bleNets{0};
+
+//Global variables for main loop
+bool ScanMode{0};// must be set or stays on menu 
+bool ScanType{0};//defaults to wifi
+
+
+void resetDisplay(uint8_t CursorX=0,uint8_t CursorY=0,uint8_t textSize=1);
+uint8_t buttonPress(uint8_t pin);
+void LoadingScreen();
+void MenuScreen();
+void wifiScanning();
+void BLEScanning();
+void drawPage(String* NetNames, int8_t* NetRSSIs, int pageNum, int listSize, uint8_t maxPages);
+void PageSelection(String* NetNames, int8_t* NetRSSIs, int listSize);
+
+
+void  resetDisplay(uint8_t CursorX, uint8_t CursorY, uint8_t textSize){
+	display.clearDisplay();
+	display.setCursor(CursorX,CursorY);
+	display.setTextWrap(true);
+	display.setTextSize(textSize);
+}
+
+uint8_t buttonPress(uint8_t pin){
+  bool press{false};
+  if(!digitalRead(pin)){
+    press=true;
+    while(!digitalRead(pin)) {
+      delay(50); //50ms debounce
+    }
+  }
+  if(press){
+    Serial.print(F("Button Press detected at pin: "));
+    Serial.println(pin);
+    return pin;
+  }
+  else {
+    return 0;
+  }
+}
+
+void LoadingScreen(){
+	resetDisplay(6,25,2);
+  display.print(F("Loading..."));
+  display.display();
+}
+
+void MenuScreen(){
+	resetDisplay();
+	display.println(F("Select Signal Type To Search For:"));
+	display.drawBitmap(10,20,WiFi_BMP,42,40,SSD1306_WHITE);
+	display.drawBitmap(74,20,BTooth_BMP,42,40,SSD1306_WHITE);
+	ScanType?(display.drawRect(72, 20, 46, 42, SSD1306_WHITE)):(display.drawRect(9, 20, 44, 42, SSD1306_WHITE));
+	display.display();
+}
+
+void wifiScanning(){
+	
+	WiFi.mode(WIFI_STA);
+	uint8_t HN{1};
+	uint8_t PageCount{0};
+	if(!initialScanWiFi){ 
+	//Loading Screen for initial scan
+		LoadingScreen();
+		initialScanWiFi=true;
+	}
+	wifiNets = WiFi.scanNetworks(false, true);
+	String ConnectionNames[wifiNets];
+	int8_t ConnectionRSSI[wifiNets];
+	for(uint8_t i=0;i<wifiNets;i++){
+		ConnectionRSSI[i]=WiFi.RSSI(i);
+		if(WiFi.SSID(i)==""){
+			ConnectionNames[i]=("HiddenNetwork"+String(i+1));
+		}
+		else{
+			ConnectionNames[i]=WiFi.SSID(i);
+		}
+	}
+	PageSelection(ConnectionNames, ConnectionRSSI, wifiNets);
+	WiFi.scanDelete();
+}
+
+void BLEScanning(){
+	if(!initialBLEScan){
+		NimBLEDevice::init(""); 
+		NimBLEScan* pBLEScan = NimBLEDevice::getScan(); 
+		LoadingScreen();
+		NimBLEScanResults results = pBLEScan->getResults(3000);
+		bleNets = results.getCount();
+		String ConnectionNames[bleNets];
+		int8_t ConnectionRSSI[bleNets];
+		for(int i=0;i<bleNets;i++){
+			const NimBLEAdvertisedDevice *device = results.getDevice(i);
+			ConnectionRSSI[i]= device->getRSSI();
+			if(device->haveName()){
+				ConnectionNames[i] = device->getName().c_str();
+			}
+			else if(device->haveTargetAddress()){
+				ConnectionNames[i] = String(device->getTargetAddress());
+			}
+			else{
+				ConnectionNames[i] = ("HiddenDevice"+String(i+1));
+			}
+		}
+		initialBLEScan=true;
+		PageSelection(ConnectionNames, ConnectionRSSI, bleNets);
+		pBLEScan->clearResults(); //free space while still data still shown to screen
+		NimBLEDevice::deinit(0);
+	}
+}
+
+void drawPage(String* NetNames, int8_t* NetRSSIs, int pageNum, int listSize, uint8_t maxPages){
+  int pageLimit;
+  resetDisplay();
+	if(ScanType){
+		display.printf("%d BT Signals Found", listSize);
+	}
+	else{
+		display.printf("%d WiFi Signals Found", listSize);
+	}
+  display.printf("\n<%d / %d> \n", pageNum+1, maxPages+1);
+  if(((pageNum*6)+6)>=listSize){
+    pageLimit=listSize;
+  }
+  else{
+    pageLimit=((pageNum*6)+6);
+  }
+  for(int i=(pageNum*6);i<pageLimit;i++){
+    display.print(NetNames[i]);
+		display.print(" ");
+		display.printf("(%d)", NetRSSIs[i]);
+		display.println();
+  }
+  display.display();
+}
+
+void PageSelection(String* NetNames, int8_t* NetRSSIs, int listSize){
+	uint8_t page{0}; //outside of loop, should maintain last value assigned inside it
+	uint8_t maxPages = (listSize-1)/6;
+	drawPage(NetNames, NetRSSIs, page, listSize, maxPages);
+	while(true){	//-->reinstate if code fucked;
+		bool newPage{0};
+		uint8_t left = buttonPress(LEFT);
+		uint8_t right = buttonPress(RIGHT);
+		uint8_t back = buttonPress(BACK);
+		if(left){
+			if(!page){
+				page=maxPages;
+			}
+			else{
+				page--;
+			}
+			newPage=1;
+		}
+		if(right){
+			if(page<maxPages){
+				page++;
+			}
+			else{
+				page=0;
+			}
+			newPage=1;
+		}
+		if(back){
+			ScanMode=0;
+			MenuScreen();
+			if(!ScanType){
+				initialScanWiFi=false;
+				WiFi.mode(WIFI_MODE_NULL);
+			}
+			else{
+				initialBLEScan=false;
+			}
+			break;
+		}
+		if(newPage){
+			drawPage(NetNames, NetRSSIs, page, listSize, maxPages);
+		}
+		delay(10);
+	}
+}
+
+void setup() {
+	Serial.begin(9600);
+	//button setup
+  pinMode(LEFT, INPUT_PULLUP);
+  pinMode(RIGHT, INPUT_PULLUP);
+  pinMode(SELECT, INPUT_PULLUP);
+  pinMode(BACK, INPUT_PULLUP);
+  // Initialize OLED screen
+  Wire.begin(21,22);
+  if(!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Infinite loop to terminate program
+  }
+  // Clear display buffer
+  display.clearDisplay();
+  // Set text size and color
+  display.setTextColor(SSD1306_WHITE);
+	MenuScreen();
+}
+
+void loop() {
+	if(!ScanMode){
+		// Read the raw electrical state of all pins instantly at the same time
+		uint8_t left = buttonPress(LEFT);
+		uint8_t right = buttonPress(RIGHT);
+		uint8_t select = buttonPress(SELECT);
+
+		if(left){
+			ScanType=0; //highlights wifi scanning mode
+			MenuScreen();
+		}
+		if(right){
+			ScanType=1; //highlights bluetooth scanning mode
+			MenuScreen();
+		}	
+		if(select){
+			ScanMode=1;
+		}
+	}
+	else if(ScanMode){
+		if(ScanType==0){
+			wifiScanning();
+		}
+		else if(ScanType==1){
+			BLEScanning();
+		}
+	}
+}
+
